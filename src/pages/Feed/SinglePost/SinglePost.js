@@ -1,38 +1,66 @@
-import React, { Component } from 'react';
+import React, { Component } from "react"
 
-import Image from '../../../components/Image/Image';
-import './SinglePost.css';
+import Image from "../../../components/Image/Image"
+import "./SinglePost.css"
 
 class SinglePost extends Component {
   state = {
-    title: '',
-    author: '',
-    date: '',
-    image: '',
-    content: ''
-  };
+    title: "",
+    author: "",
+    date: "",
+    image: "",
+    content: "",
+  }
 
   componentDidMount() {
-    const postId = this.props.match.params.postId;
-    fetch('http://localhost:8080/feed/post/' + postId)
-      .then(res => {
-        if (res.status !== 200) {
-          throw new Error('Failed to fetch status');
+    const postId = this.props.match.params.postId
+    const graphqlQuery = {
+      query: `
+        query FetchSinglePost($postId:ID!) {
+          post(id: $postId){
+            title
+            content
+            imageUrl
+            creator{
+              name
+            }
+            createdAt
+          }
         }
-        return res.json();
+      `,
+      variables: {
+        postId: postId,
+      },
+    }
+    fetch("http://localhost:8080/graphql", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + this.props.token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(graphqlQuery),
+    })
+      .then((res) => {
+        return res.json()
       })
-      .then(resData => {
+      .then((resData) => {
+        console.log(resData)
+        if (resData.errors) {
+          throw new Error("User login failed.")
+        }
         this.setState({
-          title: resData.post.title,
-          author: resData.post.creator.name,
-          image: 'http://localhost:8080/' + resData.post.imageUrl,
-          date: new Date(resData.post.createdAt).toLocaleDateString('en-US'),
-          content: resData.post.content
-        });
+          title: resData.data.post.title,
+          author: resData.data.post.creator.name,
+          image: "http://localhost:8080/" + resData.data.post.imageUrl,
+          date: new Date(resData.data.post.createdAt).toLocaleDateString(
+            "en-US"
+          ),
+          content: resData.data.post.content,
+        })
       })
-      .catch(err => {
-        console.log(err);
-      });
+      .catch((err) => {
+        console.log(err)
+      })
   }
 
   render() {
@@ -47,8 +75,8 @@ class SinglePost extends Component {
         </div>
         <p>{this.state.content}</p>
       </section>
-    );
+    )
   }
 }
 
-export default SinglePost;
+export default SinglePost
